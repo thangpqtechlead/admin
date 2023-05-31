@@ -1,0 +1,25 @@
+<h1>Hóa đơn</h1>
+
+<ul class="people_list">
+    {{#each sanpham}}
+    <li>
+        <p>
+            <b>Tên sản phẩm: </b>
+            {{this.pName}}
+        </p>
+
+        <b>mã sản phẩm: </b>
+        {{this.pID}}
+        </p>
+
+        {{!-- <b>số lượng sản phẩm: </b>
+        {{this.number}}
+        </p> --}}
+    </li>
+    {{/each}}
+</ul>
+
+
+<b>tổng tiền sản phẩm: </b>
+{{all}} VND
+</p>
