@@ -1,84 +1,68 @@
-const http = require('http');
-const url = require('url');
-const fs = require('fs');
+const express = require('express');
+const path = require('path')
+const { engine } = require('express-handlebars');
+const bodyParser = require('body-parser');
+const Admin = require('./model/admin');
+const Product = require('./model/product');
 
-const notFoundController = require('./src/controllers/notfound.controller');
-const homeController = require('./src/controllers/home.controller');
-const loginController = require('./src/controllers/login.controller');
-const registerController = require('./src/controllers/register.controller');
-const PORT = 3000;
-handlers = {};
-handlers.home = (req, res) => {
-    let currentPage = 1;
-        homeController.getHomePage(req, res).catch(err => {
-        console.log(err.message);
-    })
-}
-handlers.login = (req, res) => {
-    if (req.method === 'GET') {
-        loginController.getLoginPage(req, res).catch(err => {
-            console.log(err.message);
-        })
-    } else {
-        loginController.loginToPage(req, res).catch(err => {
-            console.log(err.message);
-        })
-    }
-}
-handlers.register = (req, res) => {
-    if (req.method === 'GET') {
-        registerController.getRegisterPage(req, res).catch(err => {
-            console.log(err.message);
-        })
-    }
-}
+const app = express();
+// app.use(express.json())
+app.set('views', path.join(__dirname, "views"));
+app.engine('hbs', engine({
+    defaultLayout: 'main.hbs'
+}));
+app.set('view engine', 'hbs');
+app.use(bodyParser.urlencoded({extended: false}));
 
-handlers.notfound = (req, res) => {
-    notFoundController.getNotFoundPage(req, res).catch(err => {
-        console.log(err.message);
-    })
-}
-const adminHandlers = (req, res) => {
-    if (req.method === 'GET') {
-        loginController.getAdminPage(req, res).catch(err => {
-            console.log(err.message);
-        })
-    }
-}
-router = {
-    '/': handlers.home,
-    '/login': handlers.login,
-    '/register': handlers.register,
-    '/admin':adminHandlers,
-    
-};
+app.use(express.static(path.join(__dirname, 'assets')));
 
-let mimeTypes={
-    'jpeg': 'images/jpeg',
-    'jpg' : 'images/jpg',
-    'png' : 'images/png',
-    'js' :'text/javascript',
-    'css' : 'text/css',
-    'svg':'image/svg+xml',
-    'ttf':'font/ttf',
-    'woff':'font/woff',
-    'woff2':'font/woff2',
-    'eot':'application/vnd.ms-fontobject'
-};
+console.log(path.join(__dirname, 'assets'))
 
-const server = http.createServer(async(req, res)=>{
-    let urlPath = url.parse(req.url).pathname;
-    const filesDefences = urlPath.match(/\.js|\.css|\.png|\.svg|\.jpg|\.jpeg|\.ttf|\.woff|\.woff2|\.eot/);
-    if (filesDefences) {
-        const extension = mimeTypes[filesDefences[0].toString().split('.')[1]];
-        res.writeHead(200, {'Content-Type': extension});
-        fs.createReadStream(__dirname  + req.url).pipe(res)
-    } else {
-        let chosenHandler = (typeof (router[urlPath]) !== 'undefined') ? router[urlPath] : handlers.notfound;
-        chosenHandler(req, res);
-    }
+app.get('/', async (req, res) => {
+
+    res.render('create-product');
+});
+
+app.get('/login', (req, res) => {
+    res.render('login')
 })
 
-server.listen(PORT, 'localhost', () => {
-    console.log(`Server listening on port http://localhost:${PORT}`)
+app.post('/login',async (req, res) => {
+    const data = req.body;
+    const AdminModel = new Admin()
+    const admin = await AdminModel.findAdminByUsername(data.username);
+    if(admin.password !== data.password){
+        res.status(401).json({message: "sai mat khau"}).end()
+    }
+    res.redirect('/')
+    // res.stop()
+    // res.json('dang nhap thanh cong').end()
+})
+app.listen(8000);
+
+app.post('/hoadon', async (req, res) => {
+
+    const ProductModel = new Product()
+    console.log(req.body)
+
+    // const promise = await Promise.all
+    const sanpham = await ProductModel.layNhieuSanPham(req.body.id)
+    console.log("🚀 ~ file: server.js:51 ~ app.post ~ sanpham:", sanpham)
+
+    const tongGia = sanpham.reduce((pre, cur, index) => {
+        pre = pre + (Number(cur.price) * Number(req.body.soluong[index]) )
+        return pre;
+    }, 0)
+    // req.body.id.forEach(async(pId, index) => {
+
+    //     tongGia +=  Number(req.body.soluong[index]) * Number(sanpham.price)
+    // });
+    
+    res.render('hoadon', {
+        // pID: sanpham.pID,
+        // pName: sanpham.pName,
+        // number: req.body.soluong,
+        sanpham,
+        all: tongGia
+    })
 })
